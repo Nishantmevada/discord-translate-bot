@@ -1,3 +1,5 @@
+/* ---------------- WEB SERVER (FOR RENDER) ---------------- */
+
 const express = require("express");
 const app = express();
 
@@ -8,6 +10,8 @@ app.get("/", (req,res)=>{
 app.listen(3000, ()=>{
   console.log("Web server running");
 });
+
+/* ---------------- IMPORTS ---------------- */
 
 require("dotenv").config()
 
@@ -25,6 +29,8 @@ ButtonStyle
 const translate = require("google-translate-api-x")
 const fs = require("fs")
 
+/* ---------------- DISCORD CLIENT ---------------- */
+
 const client = new Client({
 intents:[
 GatewayIntentBits.Guilds,
@@ -32,6 +38,8 @@ GatewayIntentBits.GuildMessages,
 GatewayIntentBits.MessageContent
 ]
 })
+
+/* ---------------- LOAD USERS ---------------- */
 
 let users = {}
 
@@ -43,11 +51,11 @@ function save(){
 fs.writeFileSync("./users.json",JSON.stringify(users,null,2))
 }
 
+/* ---------------- BOT READY ---------------- */
+
 client.once("ready", async ()=>{
 
 console.log("🌐 Translator Bot Online")
-
-/* REGISTER COMMAND */
 
 const commands = [
 new SlashCommandBuilder()
@@ -68,9 +76,11 @@ Routes.applicationCommands(client.user.id),
 
 })
 
-/* SLASH COMMAND */
+/* ---------------- INTERACTIONS ---------------- */
 
 client.on("interactionCreate", async interaction => {
+
+/* ---------- SET LANGUAGE ---------- */
 
 if(interaction.isChatInputCommand()){
 
@@ -90,19 +100,23 @@ ephemeral:true
 
 }
 
-/* BUTTON CLICK */
+/* ---------- BUTTON CLICK ---------- */
 
 if(interaction.isButton()){
 
 if(interaction.customId.startsWith("translate_")){
 
-const text = interaction.customId.replace("translate_","")
+try{
+
+const messageId = interaction.customId.replace("translate_","")
+
+const channel = interaction.channel
+
+const originalMessage = await channel.messages.fetch(messageId)
 
 const lang = users[interaction.user.id] || "en"
 
-try{
-
-const result = await translate(text,{
+const result = await translate(originalMessage.content,{
 to:lang,
 forceTo:true
 })
@@ -114,6 +128,12 @@ ephemeral:true
 
 }catch(err){
 console.log(err)
+
+interaction.reply({
+content:"❌ Translation failed",
+ephemeral:true
+})
+
 }
 
 }
@@ -122,23 +142,35 @@ console.log(err)
 
 })
 
-/* ADD TRANSLATE BUTTON */
+/* ---------------- ADD TRANSLATE BUTTON ---------------- */
 
 client.on("messageCreate", async message => {
 
 if(message.author.bot) return
+if(!message.content) return
+
+// 🚫 Prevent button on slash commands
+if(message.content.startsWith("/")) return
+
+try{
 
 const button = new ButtonBuilder()
-.setCustomId(`translate_${message.id}`) 
+.setCustomId(`translate_${message.id}`)
 .setLabel("🌐 Translate")
 .setStyle(ButtonStyle.Primary)
 
 const row = new ActionRowBuilder().addComponents(button)
 
-message.reply({
+await message.reply({
 components:[row]
 })
 
+}catch(err){
+console.log(err)
+}
+
 })
+
+/* ---------------- LOGIN ---------------- */
 
 client.login(process.env.TOKEN)
