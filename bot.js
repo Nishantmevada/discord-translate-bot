@@ -118,7 +118,7 @@ client.on("messageCreate", async message => {
 if(message.author.bot) return
 
 const button = new ButtonBuilder()
-.setCustomId(`translate_${message.content}`)
+.setCustomId(`translate_${message.id}`) 
 .setLabel("🌐 Translate")
 .setStyle(ButtonStyle.Primary)
 
